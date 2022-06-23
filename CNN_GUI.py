@@ -1,65 +1,160 @@
-
 import PySimpleGUI as sg
 import cv2 as cv
 import numpy as np
-
-sg.theme("BrightColors")
-
-layout = [[sg.Text("NIST CNN Annotation Software", text_color="blue")],
-          [sg.T("")], [sg.Text("Choose a file: "), sg.Input(), sg.FileBrowse(key="-IN-")],
-          [sg.Button("Submit")]]
-
-window = sg.Window('Choose an image', layout, size=(800, 200))
-
-while True:
-    event, values = window.read()
-    if event == sg.WIN_CLOSED or event == "Exit":
-        break
-    elif event == "Submit":
-        chosenImage = values["-IN-"]
-        if chosenImage.__contains__(".png") or chosenImage.__contains__(".jpg"):
-            # sg.popup('Valid image!', keep_on_top=True)
-
-            layout2 = [[sg.Text("Valid Image!", text_color="red")],
-                       [sg.Image(values["-IN-"], size=(800, 200))],
-                       [sg.Button("Re-pick"), sg.Button("Process!")]]
-
-            window2 = sg.Window("Valid Image!", layout2, modal=True)
-
-            while True:
-                event2, window = window2.read()
-                if event2 == sg.WIN_CLOSED:
-                    break
-
-                elif event2 == "Process!":
-                    # sg.Popup("Processing Now!")
-                    img = cv.imread(chosenImage)
-                    grayScale = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-                    ret, binary = cv.threshold(grayScale, 150, 255, cv.THRESH_BINARY)
-
-                    contours, hierarchy = cv.findContours(binary, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-
-                    cv.drawContours(img, contours, 1, (0, 0, 255), 2)
-
-                    #approx = cv.approxPolyDP(contours[0], 20, True)
-
-                    #cv.drawContours(img, [approx], 0, (0, 255, 0), 2)
-                    cv.imshow('Image', img)
-
-                    cv.waitKey(0)
-                    cv.destroyAllWindows()
+from PIL import Image
+import io
+import matplotlib.pyplot as plt
 
 
+def mainWindow():
+    mainLayout = [[sg.Text("NIST CNN Annotation Software", text_color="blue")],
+                  [sg.T("")], [sg.Text("Choose a file: "), sg.Input(), sg.FileBrowse(key="-IN-")],
+                  [sg.Button("Submit")]]
+
+    window = sg.Window('Choose an image', mainLayout, size=(800, 200))
+
+    while True:
+        event, values = window.read()
+        if event == sg.WIN_CLOSED or event == "Exit":
+            break
+        elif event == "Submit":
+            chosenImage = values["-IN-"]
+            return chosenImage
 
 
+file_types = [("JPEG (*.jpg)", "*.jpg"),
+              ("All files (*.*)", "*.*")]
 
 
+def convertImageToPNG(filepath):
+    im1 = Image.open(filepath)
+    openCvProcessedImage = cv.imread(filepath)
+    imgHeight = openCvProcessedImage.shape[0]
+    imgWidth = openCvProcessedImage.shape[1]
+    print(imgHeight)
+    print(imgWidth)
+    resizedPNGImage = im1.resize((imgHeight, imgWidth))
+    slashedList = filepath.split('/')
+    nameOfFile = slashedList[-1]
+    if nameOfFile.__contains__(".jpeg"):
+        nameOfFileCut = nameOfFile.replace(".jpeg", "")
+    elif nameOfFile.__contains__(".jpg"):
+        nameOfFileCut = nameOfFile.replace(".jpg", "")
+    elif nameOfFile.__contains__(".svg"):
+        nameOfFileCut = nameOfFile.replace(".svg", "")
+    else:
+        nameOfFileCut = nameOfFile.replace(".png", "")
 
-# process image
+    editedFilePath = "/Users/yuvansundrani/Documents/Python Side Projects/NIST_CNN_Software/" + nameOfFileCut + "Edited.png"
 
-                elif event2 == "Re-pick":
-                    sg.Popup("Restart the application to choose new image!")
+    resizedPNGImage.save(editedFilePath)
+
+    # test = Image.open(editedFilePath)
+    # print("New image size: " + str(test.size)) #should be 500 by 500
+
+    return editedFilePath, imgHeight, imgWidth
 
 
-        else:
-            sg.popup('invalid image!', keep_on_top=True)
+def imagePreviewAndTileSize(pngFilePathParam, imgHeightParam, imgWidthParam):
+    # imagePrev = cv.imread(filepath)
+    # cv.imshow("Image Preview", imagePrev)
+
+    imagePreviewLayout = [[sg.Text("Image Preview", text_color="blue")],
+                          [sg.Image(pngFilePathParam, size=(imgHeightParam, imgWidthParam))],
+                          [sg.Text("X size of tile:"), sg.Input(key='-XTile-', do_not_clear=True, size=(5, 1)),
+                           sg.Text("Y size of tile:"), sg.Input(key='-YTile-', do_not_clear=True, size=(5, 1))],
+                          [sg.Button("Quit"), sg.Button("Process!")]]
+    imagePreviewWindow = sg.Window("Image Preview", imagePreviewLayout, size=(imgHeight + 300, imgWidth + 300),
+                                   modal=True)
+    while True:
+        event, values = imagePreviewWindow.read()
+        if event in (None, 'Quit'):
+            break
+        elif event == "Process!":
+            # image = Image.open(filepath)
+            # image.thumbnail((400, 400))
+            # bio = io.BytesIO()
+            # image.save(bio, format="PNG")
+            # imagePreviewWindow["-IMAGE-"].update(data=bio.getvalue())
+
+            xTile = values["-XTile-"]
+            yTile = values["-YTile-"]
+
+            print("-XTile-: " + xTile)
+            print("-YTile-: " + yTile)
+
+            return xTile, yTile
+
+    imagePreviewWindow.close()
+
+
+def tilePreviewWindow(xTile, yTile, pngImagePath):
+    # grid of tiling image using xTile and yTile
+    tiledImg = plt.imread(pngImagePath)
+
+    # Grid lines at these intervals (in pixels)
+    # dx and dy can be different
+    dx, dy = int(xTile), int(yTile)
+
+    # Custom (rgb) grid color
+    grid_color = 0
+
+    # Modify the image to include the grid
+    tiledImg[:, ::dy, :] = grid_color
+    tiledImg[::dx, :, :] = grid_color
+    plt.imshow(tiledImg, 'gray', vmin=-1, vmax=1)
+
+    plt.show()
+
+    # imagePreviewLayout = [sg.Text("Tiling Preview", text_color="blue")], \
+    #                      [[sg.Image(tiledImg, size=(300, 300))],
+    #                       [sg.Button("Quit"), sg.Button("Annotate")]]
+    #
+    # window = sg.Window("Tiling preview", imagePreviewLayout, size=(700, 700))
+    #
+    # while True:
+    #     event, values = window.read()
+    #     if event == sg.WIN_CLOSED or event == "Quit":
+    #         break
+    #     elif event == "Annotate":
+    #         tileProcessingWindow(xTile, yTile, pngImagePath)
+
+
+def tileProcessingWindow(xTile, yTile, rawFilePath):
+    # numRows = 500 % yTile
+    # numColumns = 500 % xTile
+
+    tilingImg = cv.imread(rawFilePath)
+
+    imgHeight = tilingImg.shape[0]
+    imgWidth = tilingImg.shape[1]
+
+    numCols = imgWidth // xTile
+    numRows = imgHeight // yTile
+    print("cols " + str(numCols))
+    print("rows " + str(numRows))
+
+    cv.imshow("image", tilingImg)
+
+    for i in range(numRows):
+        rowCoord1 = i * yTile
+        rowCoord2 = (i + 1) * yTile
+
+        for j in range(numCols):
+            print("%d %d", (i, j))
+            colCoord1 = j * xTile
+            colCoord2 = (j + 1) * xTile
+            tile = tilingImg[rowCoord1: rowCoord2, colCoord1: colCoord2]
+            cv.imshow("Tile", tile)
+            cv.waitKey(0)
+            cv.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    rawChosenImage = mainWindow()
+    pngFilePath, imgHeight, imgWidth = convertImageToPNG(rawChosenImage)
+    tileSize = imagePreviewAndTileSize(pngFilePath, imgHeight, imgWidth)
+    # tilingWindow(tileSizes[0], tileSizes[1], pngFile)
+    tilePreviewWindow(tileSize[0], tileSize[1], pngFilePath)
+    tileProcessingWindow(tileSize[0], tileSize[1], rawChosenImage)
+    # tilePreviewWindow(100, 100, "Copy of Dynamic Sculpt Soshi DesignEdited.png")
