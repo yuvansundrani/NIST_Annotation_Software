@@ -60,11 +60,13 @@ def imagePreviewAndTileSize(pngFilePathParam, imgHeightParam, imgWidthParam):
     # cv.imshow("Image Preview", imagePrev)
 
     imagePreviewLayout = [[sg.Text("Image Preview", text_color="blue")],
+                          [sg.Text("Size of Image: " + str(imgHeightParam) + " x " + str(imgWidthParam))],
                           [sg.Image(pngFilePathParam, size=(imgHeightParam, imgWidthParam))],
                           [sg.Text("X size of tile:"), sg.Input(key='-XTile-', do_not_clear=True, size=(5, 1)),
                            sg.Text("Y size of tile:"), sg.Input(key='-YTile-', do_not_clear=True, size=(5, 1))],
                           [sg.Button("Quit"), sg.Button("Process!")]]
-    imagePreviewWindow = sg.Window("Image Preview", imagePreviewLayout, size=(imgHeight + 300, imgWidth + 300),
+    imagePreviewWindow = sg.Window("Image Preview", imagePreviewLayout,
+                                   size=(imgHeightParam + 300, imgWidthParam + 300),
                                    modal=True)
     while True:
         event, values = imagePreviewWindow.read()
@@ -123,16 +125,18 @@ def tilePreviewWindow(xTile, yTile, pngImagePath):
 def tileProcessingWindow(xTile, yTile, rawFilePath):
     # numRows = 500 % yTile
     # numColumns = 500 % xTile
+    xTile = int(xTile)
+    yTile = int(yTile)
 
     tilingImg = cv.imread(rawFilePath)
 
-    imgHeight = tilingImg.shape[0]
-    imgWidth = tilingImg.shape[1]
+    imgHeightLocal = tilingImg.shape[0]
+    imgWidthLocal = tilingImg.shape[1]
 
-    numCols = imgWidth // xTile
-    numRows = imgHeight // yTile
-    print("cols " + str(numCols))
-    print("rows " + str(numRows))
+    numCols = imgWidthLocal // xTile
+    numRows = imgHeightLocal // yTile
+    # print("cols " + str(numCols))
+    # print("rows " + str(numRows))
 
     cv.imshow("image", tilingImg)
 
@@ -141,20 +145,38 @@ def tileProcessingWindow(xTile, yTile, rawFilePath):
         rowCoord2 = (i + 1) * yTile
 
         for j in range(numCols):
-            print("%d %d", (i, j))
+            print((i, j))
             colCoord1 = j * xTile
             colCoord2 = (j + 1) * xTile
             tile = tilingImg[rowCoord1: rowCoord2, colCoord1: colCoord2]
-            cv.imshow("Tile", tile)
-            cv.waitKey(0)
-            cv.destroyAllWindows()
+            annotateTile(tile)
+            # I would call annotateTile function here
+            #cv.imshow("Tile", tile)
+            #cv.waitKey(0)
+            #cv.destroyAllWindows()
+    # Put all the annotated tiles back together and save, most likely another function
+
+
+def annotateTile(tile):
+
+    #tile2 = cv.imread(tile)
+
+    # image = np.ones(shape=(512,512,3), dtype=np.int16)
+    pt1 = (100, 100)
+    pt2 = (400, 350)
+    color = (0, 250, 0)
+    #
+    thickness = 10
+    #
+    cv.line(tile, pt1, pt2, color, thickness)
+    cv.imshow("img w line", tile)
+    cv.waitKey(0)
+    cv.destroyAllWindows()
 
 
 if __name__ == "__main__":
     rawChosenImage = mainWindow()
     pngFilePath, imgHeight, imgWidth = convertImageToPNG(rawChosenImage)
     tileSize = imagePreviewAndTileSize(pngFilePath, imgHeight, imgWidth)
-    # tilingWindow(tileSizes[0], tileSizes[1], pngFile)
     tilePreviewWindow(tileSize[0], tileSize[1], pngFilePath)
     tileProcessingWindow(tileSize[0], tileSize[1], rawChosenImage)
-    # tilePreviewWindow(100, 100, "Copy of Dynamic Sculpt Soshi DesignEdited.png")
