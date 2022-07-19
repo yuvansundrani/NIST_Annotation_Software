@@ -16,13 +16,14 @@ def mainWindow():
                   [sg.T("")], [sg.Text("Choose a file: "), sg.Input(), sg.FileBrowse(key="-IN-")],
                   [sg.Button("Submit")]]
 
-    window = sg.Window('Choose an image', mainLayout, size=(800, 200))
+    mainWindowWindow = sg.Window('Choose an image', mainLayout, size=(800, 200))
 
     while True:
-        event, values = window.read()
+        event, values = mainWindowWindow.read()
         if event == sg.WIN_CLOSED or event == "Exit":
             break
         elif event == "Submit":
+            mainWindowWindow.close()
             chosenImage = values["-IN-"]
             return chosenImage
 
@@ -94,6 +95,8 @@ def imagePreviewAndTileSize(pngFilePathParam, imgHeightParam, imgWidthParam):
             break
         elif event == "Process!":
 
+            imagePreviewWindow.close()
+
             xTile = values["-XTile-"]
             yTile = values["-YTile-"]
             offset = values["-Offset-"]
@@ -111,7 +114,7 @@ def imagePreviewAndTileSize(pngFilePathParam, imgHeightParam, imgWidthParam):
     imagePreviewWindow.close()
 
 
-def tilePreviewWindow(xTile, yTile, offset, pngImagePath, pathOfNewDir):
+def tilePreviewWindow(xTile, yTile, offset, pngImagePath, pathOfNewDir, midpointDict):
     # grid of tiling image using xTile and yTile
     cvImage = cv.imread(pngImagePath)
 
@@ -158,12 +161,10 @@ def tilePreviewWindow(xTile, yTile, offset, pngImagePath, pathOfNewDir):
                 cv.line(cvImage, topRight, topLeft, color, thickness)
                 cv.line(cvImage, topLeft, bottomLeft, color, thickness)
 
-        cv.imshow("Tiled Image", cvImage)
-
         # write tiled image to directory
         cv2.imwrite(pathOfNewDir + "TiledImageWhole.png", cvImage)
 
-        cv.waitKey(0)
+        showTiledImageWhole(pathOfNewDir + "TiledImageWhole.png")
 
         tileNum = 0
 
@@ -172,8 +173,6 @@ def tilePreviewWindow(xTile, yTile, offset, pngImagePath, pathOfNewDir):
                 # Base x and y coordinate based on formula
                 rootX = (offsetNew * (j + 1)) + (xTileNew * j)
                 rootY = (offsetNew * (i + 1)) + (yTileNew * i)
-                print("row: " + str(i))
-                print("col: " + str(j))
 
                 if rootX > imgWidthLocal or (rootX + xTileNew) > imgWidthLocal:
                     break
@@ -191,23 +190,22 @@ def tilePreviewWindow(xTile, yTile, offset, pngImagePath, pathOfNewDir):
                 midpointCoordinateX = (bottomLeft[0] + bottomRight[0]) // 2
                 midpointCoordinateY = (bottomLeft[1] + topLeft[1]) // 2
                 midpointCoordinates = "x" + str(midpointCoordinateX) + "x_y" + str(midpointCoordinateY) + "y"
+                print(midpointCoordinates)
 
-                tileNumFullString = pathOfNewDir + "Tile" + tileNumString + "_MID(" + midpointCoordinates + ")" + ".png"
-                print(tileNumFullString)
+                tileNumFullString = "Tile" + tileNumString + "_MID(" + midpointCoordinates + ")" + ".png"
 
                 # save tiled image to pathOfNewDir
-                cv2.imwrite(tileNumFullString, tile)
+
+                pathToTile = pathOfNewDir + tileNumFullString
+
+                cv2.imwrite(pathToTile, tile)
 
                 tileNum = tileNum + 1
 
-                pathToTile = pathOfNewDir + tileNumFullString + ".png"
+                defineAngleWindow(pathToTile, pathToTile, xTileNew, yTileNew, tileNum, pathOfNewDir,
+                                  midpointCoordinateX, midpointCoordinateY, 0)
 
-                # defineAngleWindow(pathToTile, xTileNew, yTileNew, tileNum)
 
-                # showing just for testing
-                # cv2.imshow(tileNumFullString, tile)
-                # cv.waitKey(0)
-                # cv.destroyAllWindows()
     else:
 
         # coef = ((xTileNew + yTileNew) / 2) / offsetNew
@@ -243,12 +241,15 @@ def tilePreviewWindow(xTile, yTile, offset, pngImagePath, pathOfNewDir):
                 cv.line(cvImage, topRight, topLeft, color, thickness)
                 cv.line(cvImage, topLeft, bottomLeft, color, thickness)
 
-        cv.imshow("Tiled Image", cvImage)
+        # cv.imshow("Tiled Image", cvImage)
 
         # write tiled image to directory
+
         cv2.imwrite(pathOfNewDir + "TiledImageWhole.png", cvImage)
 
-        cv.waitKey(0)
+        showTiledImageWhole(pathOfNewDir + "TiledImageWhole.png")
+
+        # show tiled image in GUI
 
         tileNum = 0
 
@@ -257,16 +258,11 @@ def tilePreviewWindow(xTile, yTile, offset, pngImagePath, pathOfNewDir):
                 # Base x and y coordinate based on formula
                 rootX = (offsetNew * (j + 1)) + (xTileNew * j)
                 rootY = (offsetNew * (i + 1)) + (yTileNew * i)
-                print("row: " + str(i))
-                print("col: " + str(j))
 
                 tile = cvImage[rootY: rootY + yTileNew, rootX: rootX + xTileNew]
 
                 tileNumString = str(tileNum)
                 tileNumFullString = pathOfNewDir + "NegativeTile" + tileNumString + ".png"
-                print(tileNumFullString)
-
-                # save tiled image to pathOfNewDir
 
                 cv2.imwrite(tileNumFullString, tile)
 
@@ -274,90 +270,34 @@ def tilePreviewWindow(xTile, yTile, offset, pngImagePath, pathOfNewDir):
 
                 pathToTile = pathOfNewDir + tileNumFullString + ".png"
 
-                defineAngleWindow(pathToTile, pathToTile, xTileNew, yTileNew, tileNum)
-
-                # showing just for testing
-                # cv2.imshow(tileNumFullString, tile)
-                # cv.waitKey(0)
-                # cv.destroyAllWindows()
+                defineAngleWindow(pathToTile, pathToTile, xTileNew, yTileNew, tileNum, 0)
 
 
-# def tileProcessingWindow(xTile, yTile, offset, rawFilePath):
-#     xTileNew, yTileNew = int(xTile), int(yTile)
-#     offsetNew = int(offset)
-#
-#     tilingImg = cv.imread(rawFilePath)
-#
-#     imgHeightLocal = tilingImg.shape[0]
-#     imgWidthLocal = tilingImg.shape[1]
-#
-#     if offset >= 0:
-#
-#         numCols = imgWidthLocal // xTileNew
-#         numRows = imgHeightLocal // yTileNew
-#
-#         for i in range(numRows):
-#             rowCoord1 = (i * yTileNew) + (offsetNew * (i + 1))
-#             rowCoord2 = ((i + 1) * yTileNew) + (offsetNew * (i + 1))
-#
-#             if rowCoord1 >= int(imgHeightLocal):
-#                 break
-#
-#             elif rowCoord2 >= int(imgHeightLocal):
-#                 rowCoord2 = imgHeightLocal - 1
-#
-#             for j in range(numCols):
-#                 print((i, j))
-#                 colCoord1 = (j * xTileNew) + (offsetNew * (j + 1))
-#                 colCoord2 = ((j + 1) * xTileNew) + (offsetNew * (j + 1))
-#
-#                 if colCoord1 >= int(imgWidthLocal):
-#                     break
-#
-#                 elif colCoord2 >= int(imgWidthLocal):
-#                     rowCoord2 = imgWidth - 1
-#
-#                 tile = tilingImg[rowCoord1: rowCoord2, colCoord1: colCoord2]
-#                 cv.imshow("Tile", tile)
-#                 cv.waitKey(0)
-#                 cv.destroyAllWindows()
-#
-#     else:
-#         coef = ((xTileNew + yTile) / 2) / offsetNew
-#         numCols = (imgWidthLocal // xTileNew) * coef
-#         numRows = (imgHeightLocal // yTileNew) * coef
-#
-#         print(numCols)
-#         print(numRows)
-#
-#         for i in range(numRows + 3):
-#             rowCoord1 = (i * yTileNew) + (offsetNew * (i + 1))
-#             rowCoord2 = ((i + 1) * yTileNew) + (offsetNew * (i + 1))
-#
-#             if rowCoord1 >= int(imgHeightLocal):
-#                 break
-#
-#             elif rowCoord2 >= int(imgHeightLocal):
-#                 rowCoord2 = imgHeightLocal - 1
-#
-#             for j in range(numCols + 3):
-#                 print((i, j))
-#                 colCoord1 = (j * xTileNew) + (offsetNew * (j + 1))
-#                 colCoord2 = ((j + 1) * xTileNew) + (offsetNew * (j + 1))
-#
-#                 if colCoord1 >= int(imgWidthLocal):
-#                     break
-#
-#                 elif colCoord2 >= int(imgWidthLocal):
-#                     rowCoord2 = imgWidth - 1
-#
-#                 tile = tilingImg[rowCoord1: rowCoord2, colCoord1: colCoord2]
-#                 cv.imshow("Tile", tile)
-#                 cv.waitKey(0)
-#                 cv.destroyAllWindows()
+def showTiledImageWhole(tiledImageWholePath):
+    tiledImagePreviewLayout = [[sg.Text("Tiled Image", text_color="blue")],
+                               [sg.Image(tiledImageWholePath)],
+                               [sg.Button("Exit"), sg.Button("Process")]]
+
+    tiledImagePreviewWindow = sg.Window("Tiled Image Final", tiledImagePreviewLayout, modal=True)
+
+    while True:
+        event, values = tiledImagePreviewWindow.read()
+        if event in (None, 'Exit', 'Process'):
+            tiledImagePreviewWindow.close()
+            break
+        else:
+            break
 
 
-def defineAngleWindow(tiledImagePathOriginal, tiledImagePath, tileWidth, tileHeight, tileNumber):
+def defineAngleWindow(tiledImagePathOriginal, tiledImagePath, xTile, yTile, tileNumber, newDIRPath,
+                      midPointX, midPointY, prevAngleInput):
+    annotatedTilesDIR = "AnnotatedTiles"
+
+    finalPath = os.path.join(newDIRPath, annotatedTilesDIR)
+
+    if not os.path.isdir(finalPath):
+        os.mkdir(finalPath)
+
     imagePreviewLayout = [[sg.Text("Define Angle for Tile" + str(tileNumber), text_color="blue")],
                           [sg.Image(tiledImagePath)],
                           [sg.Text("Angle of the directionality:"),
@@ -372,6 +312,77 @@ def defineAngleWindow(tiledImagePathOriginal, tiledImagePath, tileWidth, tileHei
             break
 
         elif event == "Show Angle":
+
+            imagePreviewWindow.close()
+
+            # extracting the midpoint coordinates from tile name
+            # stringx1 = "MID(x"
+            # stringx2 = "x_"
+            # indexX1 = tiledImagePath.index(stringx1)
+            # indexX2 = tiledImagePath.index(stringx2)
+            #
+            # midPointXString = tiledImagePath[indexX1 + 5:indexX2]
+            #
+            # stringy1 = "x_y"
+            # stringy2 = "y)"
+            # indexY1 = tiledImagePath.index(stringy1)
+            # indexY2 = tiledImagePath.index(stringy2)
+            #
+            # midPointYString = tiledImagePath[indexY1 + 3:indexY2]
+            #
+            # midPointX = int(midPointXString)
+            # midPointY = int(midPointYString)
+
+            midPointX = xTile // 2
+            midPointY = yTile // 2
+
+            print(midPointX, midPointY)
+
+            # draw angle on copied tile using midpoint and angle
+            angleString = values["-Angle-"]
+
+            prevAngleInputChange = int(angleString)
+
+            c = (xTile // 3)
+
+            angleToRadians = prevAngleInputChange * (math.pi / 180)
+
+            pointY = int(c * math.sin(angleToRadians))
+            pointX = int(c * math.cos(angleToRadians))
+
+            point1 = ((midPointX + pointX), (midPointY - pointY))
+            point2 = ((midPointX - pointX), (midPointY + pointY))
+
+            print(point1, point2)
+
+            color = (0, 0, 0)
+            thickness = 2
+
+            Image = cv.imread(tiledImagePath)
+
+            copiedImage = np.copy(Image)
+
+            # copiedImageCV = cv.imread(copiedImage)
+
+            cv.line(copiedImage, point1, point2, color, thickness)
+
+            cutCopiedFullPath = tiledImagePath.replace(".png", "")
+
+            copiedFullPath = cutCopiedFullPath + "COPY_ANG" + str(prevAngleInputChange) + ".png"
+
+            cv.imwrite(copiedFullPath, copiedImage)
+
+            # imagePreviewWindow.close()
+
+            defineAngleWindow(tiledImagePathOriginal, copiedFullPath, xTile, yTile, tileNumber, newDIRPath,
+                              midPointX, midPointY, prevAngleInputChange)
+
+        elif event == "Reset":
+            imagePreviewWindow.close()
+            defineAngleWindow(tiledImagePathOriginal, tiledImagePathOriginal, xTile, yTile, tileNumber,
+                              newDIRPath, midPointX, midPointY, prevAngleInput)
+
+        elif event == "Next":
 
             # extracting the midpoint coordinates from tile name
             stringx1 = "MID(x"
@@ -388,114 +399,80 @@ def defineAngleWindow(tiledImagePathOriginal, tiledImagePath, tileWidth, tileHei
 
             midPointYString = tiledImagePath[indexY1 + 3:indexY2]
 
-            midPointX = int(midPointXString)
-            midPointY = int(midPointYString)
+            midPointXReal = int(midPointXString)
+            midPointYReal = int(midPointYString)
 
-            print(midPointX, midPointY)
+            imagePreviewWindow.close()
 
-            # draw angle on copied tile using midpoint and angle
-            angleString = values["-Angle-"]
+            # angle = values["-Angle-"]
 
-            angle = int(angleString)
+            FINALImg = cv.imread(tiledImagePath)
 
-            c = (tileWidth // 10)
+            copiedFullPathFINAL = newDIRPath + "AnnotatedTiles/" + str(tileNumber) + "TileFINAL(" + str(midPointXReal) + \
+                                  ", " + str(midPointYReal) + "ANG" + str(prevAngleInput) + ").png"
 
-            pointY = int(c * math.sin(angle))
-            pointX = int(c * math.cos(angle))
+            # print("Angle" + str(angleGlobal))
 
-            point1 = ((midPointX + pointX), (midPointY + pointY))
-            point2 = ((midPointX - pointX), (midPointY - pointY))
+            midpointDict["Tile" + str(tileNumber - 1)] = (midPointXReal, midPointYReal, prevAngleInput)
+            # print(str(midpointDict["Tile" + str(tileNumber)]))
 
-            color = (0, 0, 0)
-            thickness = 3
+            cv.imwrite(copiedFullPathFINAL, FINALImg)
 
-            OGImage = cv.imread(tiledImagePath)
-
-            copiedImage = np.copy(OGImage)
-
-            # copiedImageCV = cv.imread(copiedImage)
-
-            cv.line(copiedImage, point1, point2, color, thickness)
-
-            cutCopiedFullPath = tiledImagePath.replace(".png", "")
-
-            copiedFullPath = cutCopiedFullPath + "COPY_ANG" + str(angle) + ".png"
-
-            cv.imwrite(copiedFullPath, copiedImage)
-
-            defineAngleWindow(tiledImagePathOriginal, copiedFullPath, tileWidth, tileHeight, tileNumber)
-
-
-
-
-
-
-
-
-            # override the tileName with the same name plus angle
-            # show the new annotated tile
-
-        elif event == "Reset":
-            print("reset")
-            # stringx1 = "MID(x"
-            # stringx2 = "x_"
-            # indexX1 = tiledImagePath.index(stringx1)
-            # indexX2 = tiledImagePath.index(stringx2)
-            #
-            # midPointXString = tiledImagePath[indexX1 + 5:indexX2]
-            #
-            # stringy1 = "x_y"
-            # stringy2 = "y)"
-            # indexY1 = tiledImagePath.index(stringy1)
-            # indexY2 = tiledImagePath.index(stringy2)
-            #
-            # midPointYString = tiledImagePath[indexY1 + 3:indexY2]
-            #
-            # tiledImagePathOriginal = "Tile" + str(tileNumber) + "_MID(x" + midPointXString + "x_y" + midPointYString + "y).png"
-            defineAngleWindow(tiledImagePathOriginal, tiledImagePathOriginal, tileWidth, tileHeight, tileNumber)
-
-            # load OG pic
-
-
-        elif event == "Next":
-            angle = values["-Angle-"]
-
-            newTileFileName = "DEG:" + angle + tiledImagePath
-
-            # default to OG pic
-            # override the tileName with the same name plus angle
-
-            print("-Angle-: " + angle)
-
-            return angle
+            return None
 
     imagePreviewWindow.close()
 
 
 # Put all the annotated tiles back together and save, most likely another function
 
+def tileBackImage(xTile, tiledImage, pathOfNewDirParam, midpointDict):
+    tiledImageCV = cv.imread(tiledImage)
 
-# def annotateTile(tile):
-#
-#     #tile2 = cv.imread(tile)
-#
-#     # image = np.ones(shape=(512,512,3), dtype=np.int16)
-#     pt1 = (100, 100)
-#     pt2 = (400, 350)
-#     color = (0, 250, 0)
-#     #
-#     thickness = 10
-#     #
-#     cv.line(tile, pt1, pt2, color, thickness)
-#     cv.imshow("img w line", tile)
-#     cv.waitKey(0)
-#     cv.destroyAllWindows()
+    for tileElem in midpointDict:
+        angleToRadians = midpointDict[tileElem][2] * (math.pi / 180)
+
+        c = int(xTile) // 3
+
+        pointY = int(c * math.sin(angleToRadians))
+        pointX = int(c * math.cos(angleToRadians))
+
+        point1 = ((midpointDict[tileElem][0] + pointX), (midpointDict[tileElem][1] - pointY))
+        point2 = ((midpointDict[tileElem][0] - pointX), (midpointDict[tileElem][1] + pointY))
+        color = 0, 0, 0
+        thickness = 2
+
+        cv.line(tiledImageCV, point1, point2, color, thickness)
+
+    pathOfFinalImage = pathOfNewDirParam + "Final_Annotated_Tiled_Image.png"
+    cv.imwrite(pathOfFinalImage, tiledImageCV)
+
+
+def showFinalAnnotatedImage(tiledImagePath):
+    annotatedImagePreviewLayout = [[sg.Text("Final Annotated Image", text_color="blue")],
+                                   [sg.Image(tiledImagePath)],
+                                   [sg.Button("Exit"), sg.Button("Upload to Database")]]
+
+    annotatedImagePreviewWindow = sg.Window("Final Annotated Image", annotatedImagePreviewLayout, modal=True)
+
+    while True:
+        event, values = annotatedImagePreviewWindow.read()
+        if event in (None, 'Exit'):
+            break
+        elif event == "Upload to Database!":
+            print("Uploading to database...")
 
 
 if __name__ == "__main__":
-    # make copy of image and use that for annotation
-    #rawChosenImage = mainWindow()
-    #pngFilePath, imgHeight, imgWidth, pathOfNewDir = convertImageToPNG(rawChosenImage)
-    #tileSize = imagePreviewAndTileSize(pngFilePath, imgHeight, imgWidth)
-    #tilePreviewWindow(tileSize[0], tileSize[1], tileSize[2], pngFilePath, pathOfNewDir)
-    defineAngleWindow("Tile0_MID(x110x_y110y).png","Tile0_MID(x110x_y110y).png", 400, 253, 0)
+    midpointDict = dict()
+
+    rawChosenImage = mainWindow()
+
+    pngFilePath, imgHeight, imgWidth, pathOfNewDir = convertImageToPNG(rawChosenImage)
+
+    tileSize = imagePreviewAndTileSize(pngFilePath, imgHeight, imgWidth)
+
+    tilePreviewWindow(tileSize[0], tileSize[1], tileSize[2], pngFilePath, pathOfNewDir, midpointDict)
+
+    tileBackImage(tileSize[0], pathOfNewDir + "TiledImageWhole.png", pathOfNewDir, midpointDict)
+
+    showFinalAnnotatedImage(pathOfNewDir + "Final_Annotated_Tiled_Image.png")
